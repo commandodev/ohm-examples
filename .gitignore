@@ -1,0 +1,13 @@
+dist
+node_modules
+Main.jsexe
+.tern-port
+build
+.cabal-deps
+result
+nixpkgs
+\#*
+\.\#*
+deps
+.node-deps
+log
