@@ -28,6 +28,9 @@ data ServerState = ServerState {
  , ssMessages :: STM.TVar [Said]
  }
 
+logMsg :: Show a => String -> a -> IO ()
+logMsg msg a = putStrLn (msg ++ ": " ++ show a)
+
 getState :: MonadIO m => ServerState -> m InitialState
 getState state = liftIO $ STM.atomically $ do
   c <- uConnected <$> STM.readTVar (ssConnected state)
@@ -41,20 +44,26 @@ server state = do
   let state' = getState state
   let forUserName m = liftIO (STM.atomically (STM.tryReadTMVar userNameMVar)) >>= mapM_ m
 
-  SocketIO.on "new message" $ \(NewMessage message) ->
+  SocketIO.on "new message" $ \(NewMessage message) -> 
     forUserName $ \userName -> do
-      liftIO $ print message
-      SocketIO.broadcast "new message" (Said userName message)
+      let s = Said userName message
+      liftIO $ do
+        logMsg "SAID" s
+        STM.atomically $ do
+          messages <- (s:) <$> STM.readTVar (ssMessages state)
+          STM.writeTVar (ssMessages state) messages
+      SocketIO.broadcast "new message" s
   
   SocketIO.on_ "load state" $ SocketIO.emit "state" =<< state'
 
-  SocketIO.on "add user" $ \m@(AddUser userName) -> do
-    liftIO $ print m
-    names <- liftIO $ STM.atomically $ do
-      names <- (Set.insert userName) . uConnected <$> STM.readTVar (ssConnected state)
-      STM.putTMVar userNameMVar userName
-      STM.writeTVar (ssConnected state) (UsersConnected names)
-      return names
+  SocketIO.on "add user" $ \(AddUser userName) -> do
+    names <- liftIO $ do
+      logMsg "ADD USER" userName
+      STM.atomically $ do
+        names <- (Set.insert userName) . uConnected <$> STM.readTVar (ssConnected state)
+        STM.putTMVar userNameMVar userName
+        STM.writeTVar (ssConnected state) (UsersConnected names)
+        return names
 
     SocketIO.emit "login" (Loggedin userName)
     SocketIO.broadcast "user joined" (UserJoined userName)
@@ -79,12 +88,22 @@ server state = do
 
   SocketIO.on_ "typing" $
     forUserName $ \userName -> do
-      InitialState _ t _ <- state'
+      typing <- liftIO $ do
+        logMsg "TYPING" userName
+        STM.atomically $ do
+          typing <- (Set.insert userName) . uTyping <$> STM.readTVar (ssTyping state)
+          STM.writeTVar (ssTyping state) (UsersTyping typing)
+          return typing
       SocketIO.broadcast "typing" (UserName userName)
-      SocketIO.broadcast "currently typing" t
+      SocketIO.broadcast "currently typing" typing
 
   SocketIO.on_ "stop typing" $
     forUserName $ \userName -> do
-      InitialState _ t _ <- state'
+      typing <- liftIO $ do
+        logMsg "STOP TYPING" userName
+        STM.atomically $ do
+          typing <- (Set.delete userName) . uTyping <$> STM.readTVar (ssTyping state)
+          STM.writeTVar (ssTyping state) (UsersTyping typing) 
+          return typing
       SocketIO.broadcast "stop typing" (UserName userName)
-      SocketIO.broadcast "currently typing" t
+      SocketIO.broadcast "currently typing" typing

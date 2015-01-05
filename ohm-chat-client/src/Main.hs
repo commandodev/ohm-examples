@@ -66,6 +66,7 @@ chatMessageProcessor = Processor $ \msg -> do
       logMessage "SAID" msg
       lift $ wsEmit "new message" $ NewMessage m 
       lift $ wsEmit_ "stop typing"
+      yield (EnteringText "")
     SomeoneTyping _   -> lift $ wsEmit_ "typing"
     StopTyping _      -> lift $ wsEmit_ "stop typing"
     _ -> return ()
@@ -109,10 +110,11 @@ main = do
   sioSub s "user joined"         $ sendToModel modelEvents (Chat . NewUser)                    
   sioSub s "user left"           $ sendToModel modelEvents (Chat . UserLeft)                   
   --sioSub s "login"             $ sendToModel modelEvents (Chat . NewUser)                  
-  sioSub s "typing"              $ sendToModel modelEvents (Chat . SomeoneTyping)              
-  sioSub s "stop typing"         $ sendToModel modelEvents (Chat . StopTyping)                 
+  -- sioSub s "typing"              $ sendToModel modelEvents (Chat . SomeoneTyping)              
+  -- sioSub s "stop typing"         $ sendToModel modelEvents (Chat . StopTyping)                 
   sioSub s "currently connected" $ sendToModel modelEvents (Chat . CurrentlyConnected) 
-  sioSub s "load state"          $ sendToModel modelEvents (Chat . LoadState)
+  sioSub s "currently typing"    $ sendToModel modelEvents (Chat . CurrentlyTyping) 
+  sioSub s "state"               $ sendToModel modelEvents (Chat . LoadState)
   
   where
     sendToModel evts f = void . atomically . PC.send evts . f

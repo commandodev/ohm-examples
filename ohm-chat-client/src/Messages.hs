@@ -56,6 +56,7 @@ data ChatMessage =
  | EnterMessage Said
  | LoadState InitialState
  | CurrentlyConnected (Set Uname)
+ | CurrentlyTyping (Set Uname)
  deriving (Show, Generic)
 
 makePrisms ''ChatMessage
@@ -107,10 +108,10 @@ processChat (UserLeft (UserJoined name)) model = model &~ do
   peopleChatting %= (S.delete name) 
 processChat (EnterMessage message) model = model &~ do
    messages %= (message:)
-   msgBox .= ""
 processChat (LoadState (InitialState c t m)) model = model &~ do
    peopleChatting .= c
    peopleTyping .= t
    messages .= m
-
 processChat (CurrentlyConnected c) model = model & peopleChatting .~ c
+processChat (CurrentlyTyping t) model = model & peopleTyping .~ t
+

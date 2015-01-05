@@ -28,7 +28,7 @@ chatStatsRender chatters =
 typingRender :: Set Text -> HTML
 typingRender typers =
   row
-    [ col3 [into strong ["Currently typing"]]
+    [ col3 [into strong ["Currently typing:"]]
     , col6 $ nameListRender typers
     ]
     
