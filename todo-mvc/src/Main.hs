@@ -95,7 +95,7 @@ newItem chan todo =
     [ into form
       [ with input (do
              attrs . at "placeholder" ?= "Create a new task"
-             attrs . at "value" ?= value
+             props . at "value" ?= value
              onInput $ contramap SetEditText chan)
              []
         , with (btn click "Create") (attrs . at "hidden" ?= "true") ["Create"]
@@ -110,9 +110,9 @@ renderItem chan (idx, (Item itemTitle complete)) =
   into li
     [ into form
       [ with input (do
-          attrs . at "type" ?= "checkbox"
+          props . at "type" ?= "checkbox"
           attrs . at "title" ?= "Mark as Completed"
-          attrs . at "checked" ?= (if complete then "checked" else "")
+          props . at "checked" ?= (if complete then "checked" else "")
           onChange $ contramap (const $ SetCompleted idx (if complete then False else True)) chan
           classes .= ["completed"])
           []
