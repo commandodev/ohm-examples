@@ -56,43 +56,36 @@ wsEmit_ chan = do
   liftIO $ sioSend_ sio chan
 
 
-chatMessageProcessor :: Processor ChatMessage ChatMessage ProcessorMonad
+chatMessageProcessor :: Processor ProcessorMonad ChatUIEvent ChatMessage
 chatMessageProcessor = Processor $ \msg -> do
   case msg of
-    EnteringText _ -> do
+    EnteringText t -> do
       lift $ wsEmit_ "typing"
-      yield msg
+      yield $ SetMessageBoxText t
     EnterMessage (Said _ m) -> do
       logMessage "SAID" msg
       lift $ wsEmit "new message" $ NewMessage m 
       lift $ wsEmit_ "stop typing"
-      yield (EnteringText "")
-    SomeoneTyping _   -> lift $ wsEmit_ "typing"
-    StopTyping _      -> lift $ wsEmit_ "stop typing"
-    _ -> return ()
-  yield msg
+      yield (SetMessageBoxText "")
 
-appMessageProcessor :: Processor Message Message ProcessorMonad
+appMessageProcessor :: Processor ProcessorMonad (Message ChatUIEvent) (Message ChatMessage)
 appMessageProcessor = Processor $ \msg -> do
   case msg of
     Login (UserLogin uName) -> do
       logMessage "LOGIN" msg
       lift $ wsEmit "add user" (AddUser uName)
       yield (SwitchView ChatView)
-      yield msg
-    m@(Login (EnteringName _)) -> do
+      yield (Login (UserLogin uName))
+    m@(Login (EnteringName n)) -> do
       logMessage "ENTERINGNAME" m
-      yield m
+      yield (Login (EnteringName n))
     _ -> return ()
 
-adapt :: (Monad m) => Processor e e m -> Prism' msg e -> Processor msg msg m
-adapt (Processor p) prsm = Processor $ \msg ->
-   traverse_ (p ~> (yield . review prsm)) . preview prsm $ msg
-  
-modelComp :: Component Env Message AppModel Message
+
+modelComp :: Component Env (Message ChatMessage) AppModel (Message ChatUIEvent)
 modelComp = Component process rootView combined
   where
-    combined = (adapt chatMessageProcessor _Chat)
+    combined = (Chat <$> handles _Chat chatMessageProcessor)
             <> appMessageProcessor
 
 main :: IO ()
@@ -106,7 +99,7 @@ main = do
   modelEvents <- runComponent (initialModel) (Env s) modelComp
   sioSub s "login"               $ \(Loggedin _) -> 
     sioSend_ s "load state"                                                             
-  sioSub s "new message"         $ sendToModel modelEvents (Chat . EnterMessage)               
+  sioSub s "new message"         $ sendToModel modelEvents (Chat . NewChatMessage)               
   sioSub s "user joined"         $ sendToModel modelEvents (Chat . NewUser)                    
   sioSub s "user left"           $ sendToModel modelEvents (Chat . UserLeft)                   
   --sioSub s "login"             $ sendToModel modelEvents (Chat . NewUser)                  

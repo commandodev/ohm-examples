@@ -44,7 +44,7 @@ msgRender (Said nm msg) =
     ]
 
 
-textBoxRender :: Maybe Text -> Text -> DOMEvent ChatMessage -> HTML
+textBoxRender :: Maybe Text -> Text -> DOMEvent ChatUIEvent -> HTML
 textBoxRender name value saidEvent@(DOMEvent chan) =
   with form (classes .= ["form-inline row"])
     [ with div (classes .= ["form-group col-sm-3"])
@@ -55,8 +55,8 @@ textBoxRender name value saidEvent@(DOMEvent chan) =
         [ with input (do
             classes .= ["form-control"]
             attrs . at "placeholder" ?= "Enter Message"
-            attrs . at "value" ?= (toJSString value)
-            onInput $ contramap (EnteringText . Text.pack)saidEvent)
+            props . at "value" ?= (toJSString value)
+            onInput $ contramap (EnteringText . Text.pack) saidEvent)
             []
         ]
       , mkButton sendMessage "Send Message" ["btn-primary"]
@@ -64,7 +64,7 @@ textBoxRender name value saidEvent@(DOMEvent chan) =
   where addName said = EnterMessage $ Said (fromMaybe "Unknown" name) said
         sendMessage = const $ chan (addName value)
 
-chatRender :: DOMEvent ChatMessage -> ChatModel -> HTML
+chatRender :: DOMEvent ChatUIEvent -> ChatModel -> HTML
 chatRender chan (ChatModel msgs chatters typers name currentMsg) =
   container
    ( [chatStatsRender chatters]
@@ -84,14 +84,14 @@ loginRender chan m =
         [ with input (do
             classes .= ["form-control"]
             attrs . at "placeholder" ?= "Enter Name"
-            attrs . at "value" ?= (m ^. loginBox.Lens.unpacked.to toJSString)
+            props . at "value" ?= (m ^. loginBox.Lens.unpacked.to toJSString)
             onInput $ contramap (EnteringName . Text.pack) chan)
             []
         ]
       , mkButton (const . channel chan $ (UserLogin (m ^. loginBox))) "Login" ["btn-primary"]
     ]
 
-rootView :: DOMEvent Message -> AppModel -> HTML
+rootView :: DOMEvent (Message ChatUIEvent) -> AppModel -> HTML
 rootView chan m =
   container
     [ with nav (classes .= ["nav", "navbar", "navbar-default"])
