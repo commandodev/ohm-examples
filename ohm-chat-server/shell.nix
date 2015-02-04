@@ -11,5 +11,5 @@ let
   };
 
 in pkgs.lib.overrideDerivation haskellPackages.example (attrs: {
-     buildInputs = [ haskellPackages.cabalInstall_1_20_0_4 ] ++ attrs.buildInputs;
+     buildInputs = [ haskellPackages.cabalInstall ] ++ attrs.buildInputs;
    })
