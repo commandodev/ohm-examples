@@ -25,7 +25,6 @@ data Action
   | SetEditText String
   | SetCompleted Index Bool
   | SetFilter Filter
-  | DoNothing
 
 data Item = Item 
  { _title :: String
@@ -62,7 +61,6 @@ process (RemoveItem idx) todo = todo & items %~ deleteAt idx
 process (SetEditText str) todo = todo & editText .~ str
 process (SetCompleted idx c) todo = todo & items.element idx.completed .~ c
 process (SetFilter f) todo = todo & filter .~ f
-process _ todo = todo
 
   
 --------------------------------------------------------------------------------
@@ -148,7 +146,7 @@ btn click txt = with button (onClick $ DOMEvent click) [text txt]
 
 
 modelComp :: Component () Action ToDo Action
-modelComp = Component process todoView idProcessor -- (Pipes.map P.id)
+modelComp = Component process todoView idProcessor
 
 main :: IO ()
-main = void $ runComponent (initialToDo) () modelComp
+main = void $ runComponent initialToDo () modelComp
