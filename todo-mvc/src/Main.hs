@@ -35,7 +35,7 @@ data Item = Item
  , _completed :: Bool
  } deriving Show
  
-makeLenses ''Item
+--makeLenses ''Item
 
 data ToDo = ToDo
   { _items :: [Item]
@@ -43,7 +43,7 @@ data ToDo = ToDo
   , _filter :: Filter
   } deriving Show
 
-makeLenses ''ToDo 
+-- makeLenses ''ToDo 
  
 initialToDo :: ToDo
 initialToDo = ToDo [] "" All
@@ -58,13 +58,14 @@ logMessage :: (Show a, MonadIO m) => String -> a -> m ()
 logMessage msg obj = liftIO . putStrLn $ msg ++ ": " ++ (show obj)
 
 process :: Action -> ToDo -> ToDo
-process (NewItem str) todo = todo &~ do
-   items %= (Item str False:)
-   editText .= ""
-process (RemoveItem idx) todo = todo & items %~ deleteAt idx
-process (SetEditText str) todo = todo & editText .~ str
-process (SetCompleted idx c) todo = todo & items.element idx.completed .~ c
-process (SetFilter f) todo = todo & filter .~ f
+process = undefined
+--process (NewItem str) todo = todo &~ do
+--   (to _items) %= (Item str False:)
+--   to _editText .= ""
+-- process (RemoveItem idx) todo = todo & to _items %~ deleteAt idx
+-- process (SetEditText str) todo = todo & to _editText .~ str
+-- process (SetCompleted idx c) todo = todo & to _items.element idx.to _completed .~ c
+-- process (SetFilter f) todo = todo & to _filter .~ f
 
   
 --------------------------------------------------------------------------------
@@ -104,8 +105,8 @@ newItem chan todo =
       ]
     ]
   where
-  value = (todo ^. editText.to toJSString)
-  click = (const $ (channel chan) $ NewItem (todo ^. editText))
+  value = (todo ^. to _editText.to toJSString)
+  click = (const $ (channel chan) $ NewItem (todo ^. to _editText))
 
 renderItem :: DOMEvent Action -> (Int, Item) -> HTML
 renderItem chan (idx, (Item itemTitle complete)) =
@@ -135,7 +136,7 @@ renderFilters chan todo =
   with ul_ (classes .= ["filters"])
     (renderFilter <$> [All, Active, Completed])
   where
-  currentFilter = (todo ^. filter)
+  currentFilter = (todo ^. to _filter)
   renderFilter f =
     into li_
       [ with a_ (do
