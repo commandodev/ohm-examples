@@ -10,6 +10,7 @@ import Control.Applicative
 import Data.Foldable (traverse_)
 import Ohm.Component
 import Ohm.HTML
+import VirtualDom
 import Prelude hiding (div,id,span,map, filter)
 import qualified Prelude as P
                 
@@ -78,7 +79,7 @@ filterItems Completed = P.filter _completed
 
 todoView :: DOMEvent Action -> ToDo -> HTML
 todoView chan todo@(ToDo itemList _txtEntry currentFilter) =
-  with div
+  with div_
     (classes .= ["body"])
     [ titleRender, itemsRender, renderFilters chan todo]
   where
@@ -89,8 +90,8 @@ todoView chan todo@(ToDo itemList _txtEntry currentFilter) =
 
 newItem :: DOMEvent Action -> ToDo -> HTML  
 newItem chan todo =
-  with li (classes .= ["newItem"])
-    [ into form
+  with li_ (classes .= ["newItem"])
+    [ into form_
       [ with input (do
              attrs . at "placeholder" ?= "Create a new task"
              props . at "value" ?= value
@@ -105,16 +106,16 @@ newItem chan todo =
 
 renderItem :: DOMEvent Action -> (Int, Item) -> HTML
 renderItem chan (idx, (Item itemTitle complete)) =
-  into li
-    [ into form
-      [ with input (do
+  into li_
+    [ into form_
+      [ with input_ (do
           props . at "type" ?= "checkbox"
           attrs . at "title" ?= "Mark as Completed"
           props . at "checked" ?= (if complete then "checked" else "")
           onChange $ contramap (const $ SetCompleted idx (if complete then False else True)) chan
           classes .= ["completed"])
           []
-      , with span (classes .= ["description"])
+      , with span_ (classes .= ["description"])
           [text itemTitle]
       , (btn clickCancel "✖") &~ do
           classes .= ["complete"]
@@ -130,8 +131,8 @@ renderFilters chan todo =
   where
   currentFilter = (todo ^. filter)
   renderFilter f =
-    into li
-      [ with a (do
+    into li_
+      [ with a_ (do
           attrs . at "href" ?= "#"
           classes .= (if f == currentFilter then ["selected"] else [])
           onClick $ filterClick f)
@@ -149,4 +150,5 @@ modelComp :: Component () Action ToDo Action
 modelComp = Component process todoView idProcessor
 
 main :: IO ()
-main = void $ runComponent initialToDo () modelComp
+main = 
+  void $ initDomDelegator >> runComponent initialToDo () modelComp
