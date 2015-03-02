@@ -7,13 +7,16 @@ import Control.Lens hiding (Index, Action)
 import Pipes
 --import Prelude hiding ((.))
 import Control.Applicative
+import Control.Monad.Trans.State.Strict
 import Data.Foldable (traverse_)
 import Ohm.Component
 import Ohm.HTML
 import VirtualDom
-import Prelude hiding (div,id,span,map, filter)
-import qualified Prelude as P
+import VirtualDom.Prim (HTMLElement, _HTMLElement, HTML, text, properties, attributes)
+import VirtualDom.HTML.Attributes hiding (form_, span_)
                 
+import GHCJS.Foreign
+
 --------------------------------------------------------------------------------
 
 type Index = Int
@@ -73,9 +76,9 @@ showFilter Active = "Active"
 showFilter Completed = "Completed"
 
 filterItems :: Filter -> [Item] -> [Item]
-filterItems All = P.id
-filterItems Active = P.filter (not . _completed)
-filterItems Completed = P.filter _completed
+filterItems All = id
+filterItems Active = filter (not . _completed)
+filterItems Completed = filter _completed
 
 todoView :: DOMEvent Action -> ToDo -> HTML
 todoView chan todo@(ToDo itemList _txtEntry currentFilter) =
@@ -83,21 +86,21 @@ todoView chan todo@(ToDo itemList _txtEntry currentFilter) =
     (classes .= ["body"])
     [ titleRender, itemsRender, renderFilters chan todo]
   where
-  titleRender = with h1 (classes .= ["title"]) ["todos"]
-  itemsRender = with ul (classes .= ["items"])
-    (newItem chan todo : (P.map (renderItem chan) $ zip [0..] filteredItems))
+  titleRender = with h1_ (classes .= ["title"]) ["todos"]
+  itemsRender = with ul_ (classes .= ["items"])
+    (newItem chan todo : (map (renderItem chan) $ zip [0..] filteredItems))
   filteredItems = filterItems currentFilter itemList
 
 newItem :: DOMEvent Action -> ToDo -> HTML  
 newItem chan todo =
   with li_ (classes .= ["newItem"])
     [ into form_
-      [ with input (do
-             attrs . at "placeholder" ?= "Create a new task"
-             props . at "value" ?= value
+      [ with input_ (do
+             attributes . at "placeholder" ?= "Create a new task"
+             properties . at "value" ?= value
              onInput $ contramap SetEditText chan)
              []
-        , with (btn click "Create") (attrs . at "hidden" ?= "true") ["Create"]
+        , with (btn click "Create") (attributes . at "hidden" ?= "true") ["Create"]
       ]
     ]
   where
@@ -109,31 +112,34 @@ renderItem chan (idx, (Item itemTitle complete)) =
   into li_
     [ into form_
       [ with input_ (do
-          props . at "type" ?= "checkbox"
-          attrs . at "title" ?= "Mark as Completed"
-          props . at "checked" ?= (if complete then "checked" else "")
+          properties . at "type" ?= "checkbox"
+          attributes . at "title" ?= "Mark as Completed"
+          properties . at "checked" ?= (if complete then "checked" else "")
           onChange $ contramap (const $ SetCompleted idx (if complete then False else True)) chan
           classes .= ["completed"])
           []
       , with span_ (classes .= ["description"])
           [text itemTitle]
-      , (btn clickCancel "✖") &~ do
-          classes .= ["complete"]
-          attrs . at "title" ?= "Remove Item"
+      , cancelBtn
       ]
     ]
-  where clickCancel = const $ channel chan $ RemoveItem idx
+  where
+  clickCancel = const $ channel chan $ RemoveItem idx
+  cancelBtn = (btn clickCancel "✖") & _HTMLElement %~
+    (execState $ do
+       classes .= ["complete"]
+       attributes . at "title" ?= "Remove Item")
 
 renderFilters :: DOMEvent Action -> ToDo -> HTML
 renderFilters chan todo =
-  with ul (classes .= ["filters"])
+  with ul_ (classes .= ["filters"])
     (renderFilter <$> [All, Active, Completed])
   where
   currentFilter = (todo ^. filter)
   renderFilter f =
     into li_
       [ with a_ (do
-          attrs . at "href" ?= "#"
+          attributes . at "href" ?= "#"
           classes .= (if f == currentFilter then ["selected"] else [])
           onClick $ filterClick f)
           [text $ showFilter f]
@@ -141,7 +147,7 @@ renderFilters chan todo =
   filterClick f = DOMEvent $ const $ (channel chan) $ SetFilter f      
 
 btn :: (() -> IO ()) -> String -> HTML
-btn click txt = with button (onClick $ DOMEvent click) [text txt]         
+btn click txt = with button_ (onClick $ DOMEvent click) [text txt]         
 
 --------------------------------------------------------------------------------
 
