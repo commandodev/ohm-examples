@@ -1,4 +1,4 @@
-{ mkDerivation, aeson, base, containers, ghcjs-base, ghcjs-dom
+{ cabal-install, mkDerivation, aeson, base, containers, ghcjs-base, ghcjs-dom
 , ghcjs-prim, lens, mvc, oHm, pipes, pipes-concurrency, profunctors
 , stdenv, stm, text, time, transformers, virtual-dom
 }:
@@ -9,7 +9,7 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   buildDepends = [
-    aeson base containers ghcjs-base ghcjs-dom ghcjs-prim lens mvc oHm
+    cabal-install aeson base containers ghcjs-base ghcjs-dom ghcjs-prim lens mvc oHm
     pipes pipes-concurrency profunctors stm text time transformers
     virtual-dom
   ];
