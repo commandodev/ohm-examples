@@ -10,9 +10,12 @@ import Control.Applicative
 import Control.Monad.Trans.State.Strict
 import Data.Foldable (traverse_)
 import Ohm.Component
-import Ohm.HTML
+import Ohm.KeyMaster
+import Ohm.HTML hiding (classes)
 import VirtualDom
 import VirtualDom.Prim (HTMLElement, _HTMLElement, HTML, text, properties, attributes)
+import Prelude hiding (filter)
+import qualified Prelude as P
 import VirtualDom.HTML.Attributes hiding (form_, span_)
                 
 import GHCJS.Foreign
@@ -77,13 +80,14 @@ showFilter Completed = "Completed"
 
 filterItems :: Filter -> [Item] -> [Item]
 filterItems All = id
-filterItems Active = filter (not . _completed)
-filterItems Completed = filter _completed
+filterItems Active = P.filter (not . _completed)
+filterItems Completed = P.filter _completed
 
 todoView :: DOMEvent Action -> ToDo -> HTML
 todoView chan todo@(ToDo itemList _txtEntry currentFilter) =
-  with div_
-    (classes .= ["body"])
+  with div_ (do
+    onKeyPress $ DOMEvent print
+    classes .= ["body"])
     [ titleRender, itemsRender, renderFilters chan todo]
   where
   titleRender = with h1_ (classes .= ["title"]) ["todos"]
@@ -118,7 +122,9 @@ renderItem chan (idx, (Item itemTitle complete)) =
           onChange $ contramap (const $ SetCompleted idx (if complete then False else True)) chan
           classes .= ["completed"])
           []
-      , with span_ (classes .= ["description"])
+      , with span_ (do
+          classes .= ["description"]
+          onKeyPress $ DOMEvent print)
           [text itemTitle]
       , cancelBtn
       ]
@@ -156,5 +162,7 @@ modelComp :: Component () Action ToDo Action
 modelComp = Component process todoView idProcessor
 
 main :: IO ()
-main = 
+main = do
+  km <- initKeyMaster
+  key km "ctrl+a" $ (putStrLn "a called") 
   void $ initDomDelegator >> runComponent initialToDo () modelComp

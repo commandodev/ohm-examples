@@ -12,7 +12,7 @@ let haskellPackages = pkgs.haskellPackages_ghcjs.override {
     browserify = pkgs.nodePackages.browserify;
 
     client = stdenv.mkDerivation {  
-        name = "chat-client";  
+        name = "todo-mvc";  
         version = "1.0";
         src = ./.;
         buildInputs = [ ghc aeson ghcjsBase ghcjsDom ghcjsPrim
